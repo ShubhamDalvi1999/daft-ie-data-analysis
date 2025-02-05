@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daft.ie Property Analytics Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            text-align: center;
+            color: #333;
+            margin: 30px 0;
+            font-size: 24px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 8px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        .axis-label {
+            font-size: 12px;
+            fill: #666;
+        }
+        .line {
+            fill: none;
+            stroke: #69b3a2;
+            stroke-width: 2;
+        }
+        .area {
+            fill: #69b3a2;
+            opacity: 0.1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Daft.ie Property Analytics Dashboard</h1>
+
+    <!-- Market Trends Section -->
+    <h2 class="section-title">Current Market Trends</h2>
+    <div class="dashboard">
+        <div class="chart-container">
+            <h2>Price Trends (Last 12 Months)</h2>
+            <div id="price-trends"></div>
+        </div>
+        <div class="chart-container">
+            <h2>Regional Price Comparison</h2>
+            <div id="regional-prices"></div>
+        </div>
+    </div>
+
+    <!-- Property Types Section -->
+    <h2 class="section-title">Property Types Analysis</h2>
+    <div class="dashboard">
+        <div class="chart-container">
+            <h2>Most Popular Property Types</h2>
+            <div id="popular-types"></div>
+        </div>
+        <div class="chart-container">
+            <h2>Average Time on Market</h2>
+            <div id="time-on-market"></div>
+        </div>
+    </div>
+
+    <!-- Hotspots Section -->
+    <h2 class="section-title">Emerging Hotspots</h2>
+    <div class="dashboard">
+        <div class="chart-container">
+            <h2>Top Areas by New Listings</h2>
+            <div id="new-listings"></div>
+        </div>
+        <div class="chart-container">
+            <h2>Price Appreciation by Area</h2>
+            <div id="price-appreciation"></div>
+        </div>
+    </div>
+
+    <!-- Commercial vs Residential -->
+    <h2 class="section-title">Commercial vs Residential</h2>
+    <div class="dashboard">
+        <div class="chart-container">
+            <h2>Price Comparison</h2>
+            <div id="commercial-residential-price"></div>
+        </div>
+        <div class="chart-container">
+            <h2>Listing Distribution</h2>
+            <div id="commercial-residential-count"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load all data
+        Promise.all([
+            d3.json('/api/market-trends'),
+            d3.json('/api/property-types'),
+            d3.json('/api/hotspots'),
+            d3.json('/api/property-stats')
+        ]).then(([marketTrends, propertyTypes, hotspots, propertyStats]) => {
+            // Market Trends
+            createLineChart(marketTrends.monthlyTrends, '#price-trends', 'month', 'avgPrice', 'Average Price (€)');
+            createBarChart(marketTrends.regionalPrices, '#regional-prices', 'region', 'avgPrice', 'Average Price (€)');
+
+            // Property Types
+            createHorizontalBarChart(propertyTypes.popularTypes, '#popular-types', 'type', 'count', 'Number of Properties');
+            createBarChart(propertyTypes.timeOnMarket, '#time-on-market', 'type', 'avgDays', 'Average Days on Market');
+
+            // Hotspots
+            createHorizontalBarChart(hotspots.newListings, '#new-listings', 'area', 'count', 'New Listings');
+            createBarChart(hotspots.priceAppreciation, '#price-appreciation', 'area', 'currentPrice', 'Current Average Price (€)');
+
+            // Commercial vs Residential
+            createBarChart(propertyStats.commercialVsResidential, '#commercial-residential-price', 'type', 'avgPrice', 'Average Price (€)');
+            createPieChart(propertyStats.commercialVsResidential, '#commercial-residential-count');
+        });
+
+        function createLineChart(data, selector, xKey, yKey, yLabel) {
+            const margin = {top: 20, right: 20, bottom: 60, left: 80};
+            const width = 600 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            const svg = d3.select(selector)
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleTime()
+                .domain(d3.extent(data, d => new Date(d[xKey])))
+                .range([0, width]);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d[yKey])])
+                .range([height, 0]);
+
+            // Add the area
+            svg.append("path")
+                .datum(data)
+                .attr("class", "area")
+                .attr("d", d3.area()
+                    .x(d => x(new Date(d[xKey])))
+                    .y0(height)
+                    .y1(d => y(d[yKey]))
+                );
+
+            // Add the line
+            svg.append("path")
+                .datum(data)
+                .attr("class", "line")
+                .attr("d", d3.line()
+                    .x(d => x(new Date(d[xKey])))
+                    .y(d => y(d[yKey]))
+                );
+
+            // Add the X Axis
+            svg.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                .selectAll('text')
+                .style('text-anchor', 'end')
+                .attr('dx', '-.8em')
+                .attr('dy', '.15em')
+                .attr('transform', 'rotate(-45)');
+
+            // Add the Y Axis
+            svg.append('g')
+                .call(d3.axisLeft(y));
+
+            // Add Y axis label
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', 0 - margin.left)
+                .attr('x', 0 - (height / 2))
+                .attr('dy', '1em')
+                .style('text-anchor', 'middle')
+                .text(yLabel);
+        }
+
+        function createHorizontalBarChart(data, selector, xKey, yKey, xLabel) {
+            const margin = {top: 20, right: 20, bottom: 60, left: 120};
+            const width = 600 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            const svg = d3.select(selector)
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const y = d3.scaleBand()
+                .range([0, height])
+                .padding(0.1);
+
+            const x = d3.scaleLinear()
+                .range([0, width]);
+
+            y.domain(data.map(d => d[xKey]));
+            x.domain([0, d3.max(data, d => d[yKey])]);
+
+            svg.append('g')
+                .call(d3.axisLeft(y));
+
+            svg.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            svg.selectAll('.bar')
+                .data(data)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('y', d => y(d[xKey]))
+                .attr('height', y.bandwidth())
+                .attr('x', 0)
+                .attr('width', d => x(d[yKey]))
+                .attr('fill', '#69b3a2');
+
+            // Add X axis label
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('x', width / 2)
+                .attr('y', height + margin.bottom - 10)
+                .style('text-anchor', 'middle')
+                .text(xLabel);
+        }
+
+        function createBarChart(data, selector, xKey, yKey, yLabel) {
+            const margin = {top: 20, right: 20, bottom: 60, left: 80};
+            const width = 500 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            const svg = d3.select(selector)
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .range([0, width])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .range([height, 0]);
+
+            x.domain(data.map(d => d[xKey]));
+            y.domain([0, d3.max(data, d => d[yKey])]);
+
+            svg.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                .selectAll('text')
+                .style('text-anchor', 'end')
+                .attr('dx', '-.8em')
+                .attr('dy', '.15em')
+                .attr('transform', 'rotate(-45)');
+
+            svg.append('g')
+                .call(d3.axisLeft(y));
+
+            svg.selectAll('.bar')
+                .data(data)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d[xKey]))
+                .attr('width', x.bandwidth())
+                .attr('y', d => y(d[yKey]))
+                .attr('height', d => height - y(d[yKey]))
+                .attr('fill', '#69b3a2');
+
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', 0 - margin.left)
+                .attr('x', 0 - (height / 2))
+                .attr('dy', '1em')
+                .style('text-anchor', 'middle')
+                .text(yLabel);
+        }
+
+        function createPieChart(data, selector) {
+            const width = 500;
+            const height = 300;
+            const radius = Math.min(width, height) / 2;
+
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+            const svg = d3.select(selector)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width/2},${height/2})`);
+
+            const pie = d3.pie()
+                .value(d => d.count);
+
+            const arc = d3.arc()
+                .innerRadius(0)
+                .outerRadius(radius);
+
+            const arcs = svg.selectAll('arc')
+                .data(pie(data))
+                .enter()
+                .append('g');
+
+            arcs.append('path')
+                .attr('d', arc)
+                .attr('fill', (d, i) => color(i));
+
+            arcs.append('text')
+                .attr('transform', d => `translate(${arc.centroid(d)})`)
+                .attr('text-anchor', 'middle')
+                .text(d => d.data.type);
+        }
+    </script>
+</body>
+</html> 

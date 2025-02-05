@@ -1,0 +1,8 @@
+requests==2.31.0
+pandas==2.1.0
+sqlalchemy==2.0.23
+python-dotenv==1.0.0
+zeep==4.2.1  # For SOAP API interactions
+pydantic==2.5.2  # For data validation
+pytest==7.4.3  # For testing
+python-logging-loki==0.3.1  # For logging 
