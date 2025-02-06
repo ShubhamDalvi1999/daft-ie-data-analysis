@@ -10,6 +10,17 @@ This project implements a data pipeline for ingesting, processing, and storing p
 - PostgreSQL database storage with geographical data support
 - Monitoring and logging capabilities
 
+![1](https://github.com/user-attachments/assets/db2f27be-76c8-4cc2-a580-da530c0f3701)
+
+![2](https://github.com/user-attachments/assets/7c80a6db-f47e-4f3f-8d8f-880a7e267210)
+
+![3](https://github.com/user-attachments/assets/f3cbecde-4c98-4e19-8f59-a35568ef114d)
+
+![4](https://github.com/user-attachments/assets/00ce8162-76db-4b20-a39e-9915bb7af449)
+
+![5](https://github.com/user-attachments/assets/572708d2-0a51-482b-89c4-7b03d7495247)
+
+
 ## Prerequisites
 
 - Python 3.8+
