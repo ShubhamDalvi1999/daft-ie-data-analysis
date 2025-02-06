@@ -1,4 +1,4 @@
-#🏡 Daft.ie Property Data Pipeline – Scalable & Reliable Data Engineering Solution 🚀
+🏡 #Daft.ie Property Data Pipeline – Scalable & Reliable Data Engineering Solution 🚀
 
 This project implements a data pipeline for ingesting, processing, and storing property data from the Daft.ie API.
 
